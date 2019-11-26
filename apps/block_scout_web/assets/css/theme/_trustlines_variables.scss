@@ -45,6 +45,16 @@ $header-icon-color-hover: $primary; // nav icon on hover
   background-color: $primary !important;
 } // dropdown item on hover
 
+.dropdown-item.active {
+  background-color: $tertiary !important;
+  /*
+   * The important exclamation is necessary to not get overwritten by default
+   * values. This comes with the downside, that the hover effect does not apply
+   * for the active item anymore. It is considered as fine, since the active
+   * status has precedence.
+   */
+}
+
 // buttons
 $btn-line-bg: $secondary; // button bg
 $btn-line-color: $primary; // button border and font color && hover bg color

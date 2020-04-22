@@ -81,6 +81,11 @@ const appJs =
     optimization: {
       minimizer: [new TerserJSPlugin(jsOptimizationParams), new OptimizeCSSAssetsPlugin({})],
     },
+    resolve: {
+      alias: {
+        fonts: path.resolve(__dirname, "./fonts")
+      }
+    },
     module: {
       rules: [
         {

@@ -61,6 +61,7 @@ Available options are:
 | `SUBNETWORK` | Subnetwork | Empty |
 | `NETWORK_ICON` | Network icon | Empty | 
 | `NETWORK_PATH` | Network path | `/` |
+| `STATS_SITE_ID` | Site identifier the client is reporting statistics for | Empty |
 
 
 `ETHEREUM_JSONRPC_HTTP_URL` default values:

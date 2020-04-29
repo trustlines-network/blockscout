@@ -166,6 +166,10 @@ defmodule BlockScoutWeb.LayoutView do
 
   def ignore_version?("unknown"), do: true
   def ignore_version?(_), do: false
+  
+  def stats_site_id do
+    Application.get_env(:block_scout_web, :stats_site_id)
+  end
 
   def other_networks do
     get_other_networks =

@@ -7,6 +7,12 @@ import socket, { subscribeChannel } from '../socket'
 import { createStore, connectElements } from '../lib/redux_helpers.js'
 import { updateAllCalculatedUsdValues } from '../lib/currency.js'
 import { loadTokenBalanceDropdown } from '../lib/token_balance_dropdown'
+import '../lib/token_balance_dropdown_search'
+import '../lib/async_listing_load'
+import '../app'
+import {
+  openQrModal
+} from '../lib/modals'
 
 export const initialState = {
   channelDisconnected: false,
@@ -18,7 +24,9 @@ export const initialState = {
   balanceCard: null,
   fetchedCoinBalanceBlockNumber: null,
   transactionCount: null,
-  validationCount: null
+  gasUsageCount: null,
+  validationCount: null,
+  countersFetched: false
 }
 
 export function reducer (state = initialState, action) {
@@ -32,6 +40,14 @@ export function reducer (state = initialState, action) {
 
       return Object.assign({}, state, {
         channelDisconnected: true
+      })
+    }
+    case 'COUNTERS_FETCHED': {
+      return Object.assign({}, state, {
+        transactionCount: action.transactionCount,
+        gasUsageCount: action.gasUsageCount,
+        validationCount: action.validationCount,
+        countersFetched: true
       })
     }
     case 'RECEIVED_NEW_BLOCK': {
@@ -59,6 +75,14 @@ export function reducer (state = initialState, action) {
   }
 }
 
+let fetchedTokenBalanceBlockNumber = 0
+function loadTokenBalance (blockNumber) {
+  if (blockNumber >= fetchedTokenBalanceBlockNumber) {
+    fetchedTokenBalanceBlockNumber = blockNumber
+    setTimeout(loadTokenBalanceDropdown, 1000)
+  }
+}
+
 const elements = {
   '[data-selector="channel-disconnected-message"]': {
     render ($el, state) {
@@ -72,7 +96,7 @@ const elements = {
     render ($el, state, oldState) {
       if (oldState.balance === state.balance) return
       $el.empty().append(state.balanceCard)
-      loadTokenBalanceDropdown()
+      loadTokenBalance(state.fetchedCoinBalanceBlockNumber)
       updateAllCalculatedUsdValues()
     }
   },
@@ -81,13 +105,36 @@ const elements = {
       return { transactionCount: numeral($el.text()).value() }
     },
     render ($el, state, oldState) {
-      if (oldState.transactionCount === state.transactionCount) return
-      $el.empty().append(numeral(state.transactionCount).format())
+      if (state.countersFetched && state.transactionCount) {
+        if (oldState.transactionCount === state.transactionCount) return
+        $el.empty().append(numeral(state.transactionCount).format() + ' Transactions')
+        $el.show()
+        $el.parent('.address-detail-item').removeAttr('style')
+      } else {
+        $el.hide()
+        $el.parent('.address-detail-item').css('display', 'none')
+      }
+    }
+  },
+  '[data-selector="gas-usage-count"]': {
+    load ($el) {
+      return { gasUsageCount: numeral($el.text()).value() }
+    },
+    render ($el, state, oldState) {
+      if (state.countersFetched && state.gasUsageCount) {
+        if (oldState.gasUsageCount === state.gasUsageCount) return
+        $el.empty().append(numeral(state.gasUsageCount).format() + ' Gas used')
+        $el.show()
+        $el.parent('.address-detail-item').removeAttr('style')
+      } else {
+        $el.hide()
+        $el.parent('.address-detail-item').css('display', 'none')
+      }
     }
   },
   '[data-selector="fetched-coin-balance-block-number"]': {
     load ($el) {
-      return {fetchedCoinBalanceBlockNumber: numeral($el.text()).value()}
+      return { fetchedCoinBalanceBlockNumber: numeral($el.text()).value() }
     },
     render ($el, state, oldState) {
       if (oldState.fetchedCoinBalanceBlockNumber === state.fetchedCoinBalanceBlockNumber) return
@@ -99,10 +146,27 @@ const elements = {
       return { validationCount: numeral($el.text()).value() }
     },
     render ($el, state, oldState) {
-      if (oldState.validationCount === state.validationCount) return
-      $el.empty().append(numeral(state.validationCount).format())
+      if (state.countersFetched && state.validationCount) {
+        if (oldState.validationCount === state.validationCount) return
+        $el.empty().append(numeral(state.validationCount).format() + ' Blocks Validated')
+        $el.show()
+      } else {
+        $el.hide()
+      }
     }
   }
+}
+
+function loadCounters (store) {
+  const $element = $('[data-async-counters]')
+  const path = $element.data().asyncCounters
+
+  function fetchCounters () {
+    $.getJSON(path)
+      .done(response => store.dispatch(Object.assign({ type: 'COUNTERS_FETCHED' }, humps.camelizeKeys(response))))
+  }
+
+  fetchCounters()
 }
 
 const $addressDetailsPage = $('[data-page="address-details"]')
@@ -127,6 +191,9 @@ if ($addressDetailsPage.length) {
     type: 'RECEIVED_UPDATED_BALANCE',
     msg: humps.camelizeKeys(msg)
   }))
+  addressChannel.on('token_balance', (msg) => loadTokenBalance(
+    msg.block_number
+  ))
   addressChannel.on('transaction', (msg) => {
     store.dispatch({
       type: 'RECEIVED_NEW_TRANSACTION',
@@ -149,4 +216,10 @@ if ($addressDetailsPage.length) {
       type: 'RECEIVED_UPDATED_BALANCE',
       msg: humps.camelizeKeys(msg)
     }))
+
+  loadCounters(store)
+
+  $('.btn-qr-icon').click(_event => {
+    openQrModal()
+  })
 }

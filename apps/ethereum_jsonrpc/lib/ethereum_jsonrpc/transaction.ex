@@ -9,7 +9,7 @@ defmodule EthereumJSONRPC.Transaction do
   """
   require Logger
 
-  import EthereumJSONRPC, only: [quantity_to_integer: 1]
+  import EthereumJSONRPC, only: [quantity_to_integer: 1, integer_to_quantity: 1, request: 1]
 
   alias EthereumJSONRPC
 
@@ -308,9 +308,23 @@ defmodule EthereumJSONRPC.Transaction do
   end
 
   def to_elixir(transaction) when is_binary(transaction) do
-    Logger.warn(["Fetched transaction is not full: ", transaction])
+    #    Logger.warn(["Fetched transaction is not full: ", transaction])
 
     nil
+  end
+
+  def eth_call_request(id, block_number, data, to, from, gas, gas_price, value) do
+    block =
+      case block_number do
+        nil -> "latest"
+        block_number -> integer_to_quantity(block_number)
+      end
+
+    request(%{
+      id: id,
+      method: "eth_call",
+      params: [%{to: to, from: from, data: data, gas: gas, gasPrice: gas_price, value: value}, block]
+    })
   end
 
   # double check that no new keys are being missed by requiring explicit match for passthrough

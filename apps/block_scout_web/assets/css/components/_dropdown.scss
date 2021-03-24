@@ -28,6 +28,11 @@ $dropdown-menu-item-hover-background: rgba($secondary, 0.1) !default;
       border-top-right-radius: 0;
     }
   }
+
+  &.exponention-dropdown {
+    width: 100px;
+    min-width: 100px;
+  }
 }
 
 .dropdown-item {
@@ -42,6 +47,12 @@ $dropdown-menu-item-hover-background: rgba($secondary, 0.1) !default;
     &:focus {
       background-color: $dropdown-menu-item-hover-background;
       color: $dropdown-menu-item-hover-color;
+
+      .external-link-icon {
+        path {
+          fill: $header-icon-color-hover;
+        }
+      }
     }
   }
 

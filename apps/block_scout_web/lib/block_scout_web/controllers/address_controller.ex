@@ -3,9 +3,9 @@ defmodule BlockScoutWeb.AddressController do
 
   import BlockScoutWeb.Chain, only: [paging_options: 1, next_page_params: 3, split_list_by_page: 1]
 
-  alias BlockScoutWeb.AddressView
+  alias BlockScoutWeb.{AccessHelpers, AddressView}
+  alias Explorer.Counters.{AddressTransactionsCounter, AddressTransactionsGasUsageCounter}
   alias Explorer.{Chain, Market}
-  alias Explorer.Chain.Hash
   alias Explorer.ExchangeRates.Token
   alias Phoenix.View
 
@@ -33,6 +33,16 @@ defmodule BlockScoutWeb.AddressController do
     exchange_rate = Market.get_exchange_rate(Explorer.coin()) || Token.null()
     total_supply = Chain.total_supply()
 
+    items_count_str = Map.get(params, "items_count")
+
+    items_count =
+      if items_count_str do
+        {items_count, _} = Integer.parse(items_count_str)
+        items_count
+      else
+        0
+      end
+
     items =
       addresses_page
       |> Enum.with_index(1)
@@ -41,7 +51,7 @@ defmodule BlockScoutWeb.AddressController do
           AddressView,
           "_tile.html",
           address: address,
-          index: index,
+          index: items_count + index,
           exchange_rate: exchange_rate,
           total_supply: total_supply,
           tx_count: tx_count
@@ -58,29 +68,52 @@ defmodule BlockScoutWeb.AddressController do
   end
 
   def index(conn, _params) do
+    total_supply = Chain.total_supply()
+
     render(conn, "index.html",
       current_path: current_path(conn),
-      address_count: Chain.count_addresses_from_cache()
+      address_count: Chain.address_estimated_count(),
+      total_supply: total_supply
     )
   end
 
   def show(conn, %{"id" => id}) do
-    redirect(conn, to: address_transaction_path(conn, :index, id))
+    redirect(conn, to: AccessHelpers.get_path(conn, :address_transaction_path, :index, id))
   end
 
-  def transaction_and_validation_count(%Hash{byte_count: unquote(Hash.Address.byte_count())} = address_hash) do
+  def address_counters(conn, %{"id" => address_hash_string}) do
+    with {:ok, address_hash} <- Chain.string_to_address_hash(address_hash_string),
+         {:ok, address} <- Chain.hash_to_address(address_hash) do
+      {transaction_count, gas_usage_count, validation_count} = transaction_and_validation_count(address)
+
+      json(conn, %{
+        transaction_count: transaction_count,
+        gas_usage_count: gas_usage_count,
+        validation_count: validation_count
+      })
+    else
+      _ -> not_found(conn)
+    end
+  end
+
+  defp transaction_and_validation_count(address) do
     transaction_count_task =
       Task.async(fn ->
-        transaction_count(address_hash)
+        transaction_count(address)
+      end)
+
+    gas_usage_count_task =
+      Task.async(fn ->
+        gas_usage_count(address)
       end)
 
     validation_count_task =
       Task.async(fn ->
-        validation_count(address_hash)
+        validation_count(address)
       end)
 
-    [transaction_count_task, validation_count_task]
-    |> Task.yield_many(:timer.seconds(30))
+    [transaction_count_task, gas_usage_count_task, validation_count_task]
+    |> Task.yield_many(:timer.seconds(60))
     |> Enum.map(fn {_task, res} ->
       case res do
         {:ok, result} ->
@@ -96,11 +129,15 @@ defmodule BlockScoutWeb.AddressController do
     |> List.to_tuple()
   end
 
-  def transaction_count(%Hash{byte_count: unquote(Hash.Address.byte_count())} = address_hash) do
-    Chain.total_transactions_sent_by_address(address_hash)
+  def transaction_count(address) do
+    AddressTransactionsCounter.fetch(address)
   end
 
-  def validation_count(%Hash{byte_count: unquote(Hash.Address.byte_count())} = address_hash) do
-    Chain.address_to_validation_count(address_hash)
+  def gas_usage_count(address) do
+    AddressTransactionsGasUsageCounter.fetch(address)
+  end
+
+  defp validation_count(address) do
+    Chain.address_to_validation_count(address.hash)
   end
 end

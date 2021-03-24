@@ -7,7 +7,6 @@ defmodule BlockScoutWeb.Endpoint do
   end
 
   socket("/socket", BlockScoutWeb.UserSocket, websocket: [timeout: 45_000])
-  socket("/wobserver", Wobserver.Web.PhoenixSocket)
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -27,14 +26,11 @@ defmodule BlockScoutWeb.Endpoint do
       android-chrome-512x512.png
       apple-touch-icon.png
       browserconfig.xml
-      favicon.ico
-      favicon-16x16.png
-      favicon-32x32.png
       mstile-150x150.png
       safari-pinned-tab.svg
-      site.manifest
       robots.txt
-    )
+    ),
+    only_matching: ~w(manifest)
   )
 
   # Code reloading can be explicitly enabled under the

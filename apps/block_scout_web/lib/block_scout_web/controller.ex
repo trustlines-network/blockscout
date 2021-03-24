@@ -13,15 +13,16 @@ defmodule BlockScoutWeb.Controller do
     conn
     |> put_status(:not_found)
     |> put_view(BlockScoutWeb.PageNotFoundView)
-    |> render(:index)
+    |> render(:index, token: nil)
     |> halt()
   end
 
   def unprocessable_entity(conn) do
     conn
     |> put_status(:unprocessable_entity)
-    |> put_view(BlockScoutWeb.ErrorView)
-    |> render("422.html")
+    |> put_view(BlockScoutWeb.Error422View)
+    |> render(:index)
+    |> halt()
   end
 
   @doc """

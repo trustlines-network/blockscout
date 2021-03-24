@@ -15,7 +15,7 @@ defmodule BlockScoutWeb.Mixfile do
         plt_add_deps: :transitive,
         ignore_warnings: "../../.dialyzer-ignore"
       ],
-      elixir: "~> 1.9",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       lockfile: "../../mix.lock",
       package: package(),
@@ -60,13 +60,13 @@ defmodule BlockScoutWeb.Mixfile do
   defp deps do
     [
       # GraphQL toolkit
-      {:absinthe, "~> 1.4"},
+      {:absinthe, "~> 1.5.2"},
       # Integrates Absinthe subscriptions with Phoenix
-      {:absinthe_phoenix, git: "https://github.com/ayrat555/absinthe_phoenix.git", branch: "ab-update-plug"},
+      {:absinthe_phoenix, "~> 2.0.0"},
       # Plug support for Absinthe
-      {:absinthe_plug, git: "https://github.com/ayrat555/absinthe_plug.git", branch: "ab-enable-default-query"},
+      {:absinthe_plug, "~> 1.5.0"},
       # Absinthe support for the Relay framework
-      {:absinthe_relay, "~> 1.4"},
+      {:absinthe_relay, "~> 1.5"},
       {:bypass, "~> 1.0", only: :test},
       # To add (CORS)(https://www.w3.org/TR/cors/)
       {:cors_plug, "~> 2.0"},
@@ -76,21 +76,21 @@ defmodule BlockScoutWeb.Mixfile do
       {:dialyxir, "~> 0.5", only: [:dev, :test], runtime: false},
       # Need until https://github.com/absinthe-graphql/absinthe_relay/pull/125 is released, then can be removed
       # The current `absinthe_relay` is compatible though as shown from that PR
-      {:ecto, "~> 3.0", override: true},
+      {:ecto, "~> 3.3", override: true},
       {:ex_cldr, "~> 2.7"},
       {:ex_cldr_numbers, "~> 2.6"},
       {:ex_cldr_units, "~> 2.5"},
       {:cldr_utils, "~> 2.3"},
       {:ex_machina, "~> 2.1", only: [:test]},
       # Code coverage
-      {:excoveralls, "~> 0.10.0", only: [:test], github: "KronicDeth/excoveralls", branch: "circle-workflows"},
+      {:excoveralls, "~> 0.13.3"},
       {:explorer, in_umbrella: true},
       {:exvcr, "~> 0.10", only: :test},
       # HTML CSS selectors for Phoenix controller tests
       {:floki, "~> 0.20.1", only: :test},
       {:flow, "~> 0.12"},
       {:gettext, "~> 0.16.1"},
-      {:httpoison, "~> 1.0"},
+      {:httpoison, "~> 1.6"},
       {:indexer, in_umbrella: true, runtime: false},
       # JSON parser and generator
       {:jason, "~> 1.0"},
@@ -99,13 +99,14 @@ defmodule BlockScoutWeb.Mixfile do
       {:logger_file_backend, "~> 0.0.10"},
       {:math, "~> 0.3.0"},
       {:mock, "~> 0.3.0", only: [:test], runtime: false},
-      {:phoenix, "== 1.4.0"},
-      {:phoenix_ecto, "~> 4.0"},
+      {:number, "~> 1.0.1"},
+      {:phoenix, "== 1.5.6"},
+      {:phoenix_ecto, "~> 4.1"},
       {:phoenix_html, "~> 2.10"},
       {:phoenix_live_reload, "~> 1.2", only: [:dev]},
-      {:phoenix_pubsub, "~> 1.0"},
+      {:phoenix_pubsub, "~> 2.0"},
       # use `:cowboy` for WebServer with `:plug`
-      {:plug_cowboy, "~> 2.0"},
+      {:plug_cowboy, "~> 2.2"},
       # Waiting for the Pretty Print to be implemented at the Jason lib
       # https://github.com/michalmuskala/jason/issues/15
       {:poison, "~> 3.1"},
@@ -121,13 +122,13 @@ defmodule BlockScoutWeb.Mixfile do
       {:qrcode, "~> 0.1.0"},
       {:sobelow, ">= 0.7.0", only: [:dev, :test], runtime: false},
       # Tracing
-      {:spandex, github: "spandex-project/spandex", branch: "allow-setting-trace-key", override: true},
+      {:spandex, "~> 3.0"},
       # `:spandex` integration with Datadog
-      {:spandex_datadog, "~> 0.4.0"},
+      {:spandex_datadog, "~> 1.0"},
       # `:spandex` tracing of `:phoenix`
-      {:spandex_phoenix, "~> 0.3.1"},
+      {:spandex_phoenix, "~> 1.0"},
       {:timex, "~> 3.6"},
-      {:wallaby, "~> 0.22", only: [:test], runtime: false},
+      {:wallaby, "~> 0.26", only: :test, runtime: false},
       # `:cowboy` `~> 2.0` and Phoenix 1.4 compatibility
       {:wobserver, "~> 0.2.0", github: "poanetwork/wobserver", branch: "support-https"},
       {:phoenix_form_awesomplete, "~> 0.1.4"},

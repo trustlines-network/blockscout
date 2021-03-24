@@ -1,5 +1,6 @@
-@import 'theme/base_variables';
+@import "base_variables";
 @import 'trustlines_variables';
+@import "neutral_variables";
 // @import "xusdt_variables";
 // @import "dai_variables";
 // @import "ethereum_classic_variables";
@@ -13,7 +14,6 @@
 // @import "musicoin_variables";
 // @import "pirl_variables";
 // @import "poa_variables";
-// @import "posdao_variables";
 // @import "rinkeby_variables";
 // @import "ropsten_variables";
 // @import "social_variables";
@@ -21,6 +21,7 @@
 // @import "tobalaba_variables";
 // @import "tomochain_variables";
 // @import "rsk_variables";
+// @import "ethercore_variables";
 
 // responsive breakpoints
 $breakpoint-xs: 320px;

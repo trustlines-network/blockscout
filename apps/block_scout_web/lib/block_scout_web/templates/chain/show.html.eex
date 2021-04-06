@@ -24,9 +24,22 @@
             <span class="dashboard-banner-network-stats-label">
               <%= gettext "Total transactions" %>
             </span>
-            <span class="dashboard-banner-network-stats-value" data-selector="transaction-count">
-              <%= BlockScoutWeb.Cldr.Number.to_string!(@transaction_estimated_count, format: "#,###") %>
-            </span>
+            <div style="display: flex;">
+              <span class="dashboard-banner-network-stats-value" data-selector="transaction-count">
+                <%= BlockScoutWeb.Cldr.Number.to_string!(@transaction_estimated_count, format: "#,###") %>
+              </span>
+              <%= if @total_gas_usage > 0 do %>
+                <span
+                  data-toggle="tooltip"
+                  data-placement="top"
+                  data-html="true"
+                  data-template="<div class='tooltip tooltip-inversed-color tooltip-gas-usage' role='tooltip'><div class='arrow'></div><div class='tooltip-inner'></div></div>"
+                  title="<div class='custom-tooltip-header'>Total gas used</div><div class='custom-tooltip-description'><b><%= BlockScoutWeb.Cldr.Number.to_string!(@total_gas_usage, format: "#,###") %><b></div>"
+                  class="custom-tooltip-total-transactions">
+                  <i style="color: #ffffff;" class="fa fa-info-circle ml-2"></i>
+                </span>
+              <% end %>
+            </div>
           </div>
           <div class="dashboard-banner-network-stats-item dashboard-banner-network-stats-item-3">
             <span class="dashboard-banner-network-stats-label">
@@ -48,6 +61,8 @@
       </div>
     </div>
   </div>
+  <script defer data-cfasync="false" src="<%= static_path(@conn, "/js/chart-loader.js") %>"></script>
+  <script defer data-cfasync="false" src="<%= static_path(@conn, "/js/chain.js") %>"></script>
 </div>
 <section class="container">
   <div class="card card-chain-blocks">
@@ -60,7 +75,18 @@
             <%= gettext "Something went wrong, click to reload." %>
           </span>
         </button>
-         <div hidden data-selector="loading-message" class="col-lg-3" >
+        <div hidden data-selector="loading-message" class="col-lg-3" >
+         <div data-selector="chain-block">
+           <div class="tile tile-type-block n-p d-flex flex-column">
+             <a class="tile-title"><span class="tile-loader tile-label-loader"></span> </a>
+             <div class="tile-bottom-contents">
+               <div class="dark-block-loader"></div>
+               <div class="dark-block-loader"></div>
+             </div>
+           </div>
+         </div>
+        </div>
+        <div hidden data-selector="loading-message" class="col-lg-3" >
          <div data-selector="chain-block">
          <div class="tile tile-type-block n-p d-flex flex-column">
          <a class="tile-title"><span class="tile-loader tile-label-loader"></span> </a>
@@ -71,7 +97,7 @@
         </div>
         </div>
         </div>
-         <div hidden data-selector="loading-message" class="col-lg-3" >
+        <div hidden data-selector="loading-message" class="col-lg-3" >
          <div data-selector="chain-block">
          <div class="tile tile-type-block n-p d-flex flex-column">
          <a class="tile-title"><span class="tile-loader tile-label-loader"></span> </a>
@@ -82,28 +108,17 @@
         </div>
         </div>
         </div>
-         <div hidden data-selector="loading-message" class="col-lg-3" >
+        <div hidden data-selector="loading-message" class="col-lg-3" >
          <div data-selector="chain-block">
-         <div class="tile tile-type-block n-p d-flex flex-column">
-         <a class="tile-title"><span class="tile-loader tile-label-loader"></span> </a>
-         <div class="tile-bottom-contents">
-         <div class="dark-block-loader"></div>
-         <div class="dark-block-loader"></div>
+           <div class="tile tile-type-block n-p d-flex flex-column">
+             <a class="tile-title"><span class="tile-loader tile-label-loader"></span> </a>
+             <div class="tile-bottom-contents">
+              <div class="dark-block-loader"></div>
+              <div class="dark-block-loader"></div>
+            </div>
+           </div>
          </div>
-        </div>
-        </div>
-        </div>
-         <div hidden data-selector="loading-message" class="col-lg-3" >
-         <div data-selector="chain-block">
-         <div class="tile tile-type-block n-p d-flex flex-column">
-         <a class="tile-title"><span class="tile-loader tile-label-loader"></span> </a>
-         <div class="tile-bottom-contents">
-        <div class="dark-block-loader"></div>
-         <div class="dark-block-loader"></div>
-         </div>
-        </div>
-        </div>
-        </div>
+        </div>   
       </div>
     </div>
   </div>

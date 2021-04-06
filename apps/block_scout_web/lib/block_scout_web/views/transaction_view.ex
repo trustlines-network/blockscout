@@ -1,18 +1,31 @@
 defmodule BlockScoutWeb.TransactionView do
   use BlockScoutWeb, :view
 
-  alias BlockScoutWeb.{AddressView, BlockView, TabHelpers}
+  alias BlockScoutWeb.{AccessHelpers, AddressView, BlockView, CustomContractsHelpers, TabHelpers}
   alias BlockScoutWeb.Cldr.Number
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Block.Reward
   alias Explorer.Chain.{Address, Block, InternalTransaction, Transaction, Wei}
+  alias Explorer.Counters.AverageBlockTime
   alias Explorer.ExchangeRates.Token
   alias Timex.Duration
 
   import BlockScoutWeb.Gettext
+  import BlockScoutWeb.AddressView, only: [from_address_hash: 1, short_token_id: 2]
   import BlockScoutWeb.Tokens.Helpers
 
-  @tabs ["token_transfers", "internal_transactions", "logs", "raw_trace"]
+  @tabs ["token-transfers", "internal-transactions", "logs", "raw-trace"]
+
+  {:ok, burn_address_hash} = Chain.string_to_address_hash("0x0000000000000000000000000000000000000000")
+  @burn_address_hash burn_address_hash
+
+  @token_burning_title "Token Burning"
+  @token_minting_title "Token Minting"
+  @token_transfer_title "Token Transfer"
+
+  @token_burning_type "token-burning"
+  @token_minting_type "token-minting"
+  @token_transfer_type "token-transfer"
 
   defguardp is_transaction_type(mod) when mod in [InternalTransaction, Transaction]
 
@@ -35,15 +48,62 @@ defmodule BlockScoutWeb.TransactionView do
   def token_transfer_type(transaction) do
     transaction_with_transfers = Repo.preload(transaction, token_transfers: :token)
 
+    token_transfers_filtered_by_block_hash =
+      transaction_with_transfers
+      |> Map.get(:token_transfers, [])
+      |> Enum.filter(fn token_transfer ->
+        token_transfer.block_hash == transaction.block_hash
+      end)
+
+    transaction_with_transfers_filtered =
+      Map.put(transaction_with_transfers, :token_transfers, token_transfers_filtered_by_block_hash)
+
     type = Chain.transaction_token_transfer_type(transaction)
-    if type, do: {type, transaction_with_transfers}, else: {nil, transaction_with_transfers}
+    if type, do: {type, transaction_with_transfers_filtered}, else: {nil, transaction_with_transfers_filtered}
   end
 
   def aggregate_token_transfers(token_transfers) do
     {transfers, nft_transfers} =
       token_transfers
       |> Enum.reduce({%{}, []}, fn token_transfer, acc ->
-        aggregate_reducer(token_transfer, acc)
+        if token_transfer.to_address_hash != @burn_address_hash &&
+             token_transfer.from_address_hash != @burn_address_hash do
+          aggregate_reducer(token_transfer, acc)
+        else
+          acc
+        end
+      end)
+
+    final_transfers = Map.values(transfers)
+
+    final_transfers ++ nft_transfers
+  end
+
+  def aggregate_token_mintings(token_transfers) do
+    {transfers, nft_transfers} =
+      token_transfers
+      |> Enum.reduce({%{}, []}, fn token_transfer, acc ->
+        if token_transfer.from_address_hash == @burn_address_hash do
+          aggregate_reducer(token_transfer, acc)
+        else
+          acc
+        end
+      end)
+
+    final_transfers = Map.values(transfers)
+
+    final_transfers ++ nft_transfers
+  end
+
+  def aggregate_token_burnings(token_transfers) do
+    {transfers, nft_transfers} =
+      token_transfers
+      |> Enum.reduce({%{}, []}, fn token_transfer, acc ->
+        if token_transfer.to_address_hash == @burn_address_hash do
+          aggregate_reducer(token_transfer, acc)
+        else
+          acc
+        end
       end)
 
     final_transfers = Map.values(transfers)
@@ -55,7 +115,9 @@ defmodule BlockScoutWeb.TransactionView do
     new_entry = %{
       token: token_transfer.token,
       amount: nil,
-      token_id: token_transfer.token_id
+      token_id: token_transfer.token_id,
+      to_address_hash: token_transfer.to_address_hash,
+      from_address_hash: token_transfer.from_address_hash
     }
 
     {acc1, [new_entry | acc2]}
@@ -65,7 +127,9 @@ defmodule BlockScoutWeb.TransactionView do
     new_entry = %{
       token: token_transfer.token,
       amount: token_transfer.amount,
-      token_id: token_transfer.token_id
+      token_id: token_transfer.token_id,
+      to_address_hash: token_transfer.to_address_hash,
+      from_address_hash: token_transfer.from_address_hash
     }
 
     existing_entry = Map.get(acc1, token_transfer.token_contract_address, %{new_entry | amount: Decimal.new(0)})
@@ -92,7 +156,17 @@ defmodule BlockScoutWeb.TransactionView do
   end
 
   def processing_time_duration(%Transaction{earliest_processing_start: nil}) do
-    :unknown
+    avg_time = AverageBlockTime.average_block_time()
+
+    if avg_time == {:error, :disabled} do
+      :unknown
+    else
+      avg_time_in_secs =
+        avg_time
+        |> Duration.to_seconds()
+
+      {:ok, "<= #{avg_time_in_secs} seconds"}
+    end
   end
 
   def processing_time_duration(%Transaction{
@@ -174,6 +248,10 @@ defmodule BlockScoutWeb.TransactionView do
     Chain.transaction_to_status(transaction)
   end
 
+  def transaction_revert_reason(transaction) do
+    Chain.transaction_to_revert_reason(transaction)
+  end
+
   def empty_exchange_rate?(exchange_rate) do
     Token.null?(exchange_rate)
   end
@@ -230,6 +308,7 @@ defmodule BlockScoutWeb.TransactionView do
 
   def involves_token_transfers?(%Transaction{token_transfers: []}), do: false
   def involves_token_transfers?(%Transaction{token_transfers: transfers}) when is_list(transfers), do: true
+  def involves_token_transfers?(_), do: false
 
   def qr_code(%Transaction{hash: hash}) do
     hash
@@ -256,10 +335,23 @@ defmodule BlockScoutWeb.TransactionView do
 
   def transaction_display_type(%Transaction{} = transaction) do
     cond do
-      involves_token_transfers?(transaction) -> gettext("Token Transfer")
-      contract_creation?(transaction) -> gettext("Contract Creation")
-      involves_contract?(transaction) -> gettext("Contract Call")
-      true -> gettext("Transaction")
+      involves_token_transfers?(transaction) ->
+        token_transfer_type = get_token_transfer_type(transaction.token_transfers)
+
+        case token_transfer_type do
+          @token_minting_type -> gettext(@token_minting_title)
+          @token_burning_type -> gettext(@token_burning_title)
+          @token_transfer_type -> gettext(@token_transfer_title)
+        end
+
+      contract_creation?(transaction) ->
+        gettext("Contract Creation")
+
+      involves_contract?(transaction) ->
+        gettext("Contract Call")
+
+      true ->
+        gettext("Transaction")
     end
   end
 
@@ -310,8 +402,40 @@ defmodule BlockScoutWeb.TransactionView do
     |> tab_name()
   end
 
-  defp tab_name(["token_transfers"]), do: gettext("Token Transfers")
-  defp tab_name(["internal_transactions"]), do: gettext("Internal Transactions")
+  defp tab_name(["token-transfers"]), do: gettext("Token Transfers")
+  defp tab_name(["internal-transactions"]), do: gettext("Internal Transactions")
   defp tab_name(["logs"]), do: gettext("Logs")
-  defp tab_name(["raw_trace"]), do: gettext("Raw Trace")
+  defp tab_name(["raw-trace"]), do: gettext("Raw Trace")
+
+  defp get_token_transfer_type(token_transfers) do
+    token_transfers
+    |> Enum.reduce("", fn token_transfer, type ->
+      cond do
+        token_transfer.to_address_hash == @burn_address_hash ->
+          update_transfer_type_if_burning(type)
+
+        token_transfer.from_address_hash == @burn_address_hash ->
+          update_transfer_type_if_minting(type)
+
+        true ->
+          @token_transfer_type
+      end
+    end)
+  end
+
+  defp update_transfer_type_if_minting(type) do
+    case type do
+      "" -> @token_minting_type
+      @token_burning_type -> @token_transfer_type
+      _ -> type
+    end
+  end
+
+  defp update_transfer_type_if_burning(type) do
+    case type do
+      "" -> @token_burning_type
+      @token_minting_type -> @token_transfer_type
+      _ -> type
+    end
+  end
 end

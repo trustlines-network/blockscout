@@ -1,47 +1,26 @@
 defmodule BlockScoutWeb.LayoutView do
   use BlockScoutWeb, :view
 
+  alias Explorer.Chain
   alias Plug.Conn
   alias Poison.Parser
+
+  import BlockScoutWeb.AddressView, only: [from_address_hash: 1]
 
   @issue_url "https://github.com/poanetwork/blockscout/issues/new"
   @default_other_networks [
     %{
-      title: "POA Core",
+      title: "POA",
       url: "https://blockscout.com/poa/core"
     },
     %{
-      title: "POA Sokol",
+      title: "Sokol",
       url: "https://blockscout.com/poa/sokol",
       test_net?: true
     },
     %{
-      title: "xDai Chain",
-      url: "https://blockscout.com/poa/dai"
-    },
-    %{
-      title: "Ethereum Mainnet",
-      url: "https://blockscout.com/eth/mainnet"
-    },
-    %{
-      title: "Kovan Testnet",
-      url: "https://blockscout.com/eth/kovan",
-      test_net?: true
-    },
-    %{
-      title: "Ropsten Testnet",
-      url: "https://blockscout.com/eth/ropsten",
-      test_net?: true
-    },
-    %{
-      title: "Goerli Testnet",
-      url: "https://blockscout.com/eth/goerli",
-      test_net?: true
-    },
-    %{
-      title: "Rinkeby Testnet",
-      url: "https://blockscout.com/eth/rinkeby",
-      test_net?: true
+      title: "xDai",
+      url: "https://blockscout.com/poa/xdai"
     },
     %{
       title: "Ethereum Classic",
@@ -49,27 +28,13 @@ defmodule BlockScoutWeb.LayoutView do
       other?: true
     },
     %{
-      title: "Aerum Mainnet",
-      url: "https://blockscout.com/aerum/mainnet",
-      other?: true
-    },
-    %{
-      title: "Callisto Mainnet",
-      url: "https://blockscout.com/callisto/mainnet",
-      other?: true
-    },
-    %{
-      title: "RSK Mainnet",
+      title: "RSK",
       url: "https://blockscout.com/rsk/mainnet",
       other?: true
     }
   ]
 
-  alias BlockScoutWeb.SocialMedia
-
-  def network_icon_partial do
-    Keyword.get(application_config(), :network_icon) || "_network_icon.html"
-  end
+  alias BlockScoutWeb.{CustomContractsHelpers, SocialMedia}
 
   def logo do
     Keyword.get(application_config(), :logo) || "/images/blockscout_logo.svg"
@@ -80,8 +45,12 @@ defmodule BlockScoutWeb.LayoutView do
       "/images/blockscout_logo.svg"
   end
 
+  def logo_text do
+    Keyword.get(application_config(), :logo_text) || nil
+  end
+
   def subnetwork_title do
-    Keyword.get(application_config(), :subnetwork) || "Sokol Testnet"
+    Keyword.get(application_config(), :subnetwork) || "Sokol"
   end
 
   def network_title do
@@ -174,9 +143,14 @@ defmodule BlockScoutWeb.LayoutView do
   def other_networks do
     get_other_networks =
       if Application.get_env(:block_scout_web, :other_networks) do
-        :block_scout_web
-        |> Application.get_env(:other_networks)
-        |> Parser.parse!(%{keys: :atoms!})
+        try do
+          :block_scout_web
+          |> Application.get_env(:other_networks)
+          |> Parser.parse!(%{keys: :atoms!})
+        rescue
+          _ ->
+            []
+        end
       else
         @default_other_networks
       end
@@ -227,10 +201,16 @@ defmodule BlockScoutWeb.LayoutView do
 
   def other_explorers do
     if Application.get_env(:block_scout_web, :link_to_other_explorers) do
-      Application.get_env(:block_scout_web, :other_explorers, [])
+      decode_other_explorers_json(Application.get_env(:block_scout_web, :other_explorers, []))
     else
       []
     end
+  end
+
+  defp decode_other_explorers_json(data) do
+    Jason.decode!(~s(#{data}))
+  rescue
+    _ -> []
   end
 
   def webapp_url(conn) do
@@ -250,6 +230,21 @@ defmodule BlockScoutWeb.LayoutView do
     |> case do
       :error -> ""
       {:ok, url} -> url
+    end
+  end
+
+  def external_apps_list do
+    if Application.get_env(:block_scout_web, :external_apps) do
+      try do
+        :block_scout_web
+        |> Application.get_env(:external_apps)
+        |> Parser.parse!(%{keys: :atoms!})
+      rescue
+        _ ->
+          []
+      end
+    else
+      []
     end
   end
 

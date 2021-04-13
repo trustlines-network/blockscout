@@ -124,6 +124,8 @@ $fa-font-path: "~@fortawesome/fontawesome-free/webfonts";
 @import "theme/custom_contracts/dark-forest-theme";
 @import "theme/custom_contracts/circles-theme";
 
+@import "trustlines-overrides";
+
 :export {
   dashboardBannerChartAxisFontColor: $dashboard-banner-chart-axis-font-color;
   dashboardLineColorMarket: $dashboard-line-color-market;
